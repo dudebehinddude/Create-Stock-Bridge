@@ -168,6 +168,8 @@ dependencies {
     implementation 'curse.maven:applied-energistics-2-223794:6225422'
     implementation 'curse.maven:guideme-1173950:6331224'
     
+    implementation 'curse.maven:ae2-jei-integration-1074338:5748513'
+    
     implementation("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false }
     implementation("net.createmod.ponder:Ponder-NeoForge-${minecraft_version}:${ponder_version}")
     compileOnly("dev.engine-room.flywheel:flywheel-neoforge-api-${minecraft_version}:${flywheel_version}")

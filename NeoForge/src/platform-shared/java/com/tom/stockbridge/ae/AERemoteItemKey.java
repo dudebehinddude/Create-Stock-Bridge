@@ -1,6 +1,7 @@
 package com.tom.stockbridge.ae;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -28,6 +29,9 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import com.google.common.base.Preconditions;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
@@ -57,6 +61,7 @@ public class AERemoteItemKey extends AEKey {
 	private final int hashCode;
 	private final int maxStackSize;
 	private final int damage;
+	private final RemoteItem remoteItem;
 
 	private AERemoteItemKey(ItemStack stack) {
 		Preconditions.checkArgument(!stack.isEmpty(), "stack is empty");
@@ -64,6 +69,11 @@ public class AERemoteItemKey extends AEKey {
 		this.hashCode = ItemStack.hashItemAndComponents(stack);
 		this.maxStackSize = stack.getMaxStackSize();
 		this.damage = stack.getDamageValue();
+		try {
+			remoteItem = CACHE.get(stack.getItem());
+		} catch (ExecutionException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Nullable
@@ -172,7 +182,7 @@ public class AERemoteItemKey extends AEKey {
 
 	@Override
 	public Object getPrimaryKey() {
-		return stack.getItem();
+		return remoteItem;
 	}
 
 	/**
@@ -268,5 +278,9 @@ public class AERemoteItemKey extends AEKey {
 
 	public AEItemKey getAsItem() {
 		return AEItemKey.of(stack);
+	}
+
+	private static final LoadingCache<Item, RemoteItem> CACHE = CacheBuilder.newBuilder().build(CacheLoader.from(RemoteItem::new));
+	public static record RemoteItem(Item item) {
 	}
 }
