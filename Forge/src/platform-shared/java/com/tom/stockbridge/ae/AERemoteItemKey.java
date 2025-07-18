@@ -6,6 +6,7 @@ import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.Objects;
 import java.util.WeakHashMap;
+import java.util.concurrent.ExecutionException;
 
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -26,6 +27,10 @@ import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
 
 import net.minecraftforge.common.capabilities.CapabilityProvider;
+
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
@@ -64,6 +69,7 @@ public class AERemoteItemKey extends AEKey {
 	private final InternedTag internedCaps;
 	private final int hashCode;
 	private final int cachedDamage;
+	private final RemoteItem remoteItem;
 	/**
 	 * A lazily initialized itemstack used for display and ingredient testing purposes. This should never be modified
 	 * and will always have amount 1.
@@ -85,6 +91,11 @@ public class AERemoteItemKey extends AEKey {
 			this.cachedDamage = numericTag.getAsInt();
 		} else {
 			this.cachedDamage = 0;
+		}
+		try {
+			remoteItem = CACHE.get(item);
+		} catch (ExecutionException e) {
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -224,7 +235,7 @@ public class AERemoteItemKey extends AEKey {
 
 	@Override
 	public Object getPrimaryKey() {
-		return item;
+		return remoteItem;
 	}
 
 	/**
@@ -390,5 +401,9 @@ public class AERemoteItemKey extends AEKey {
 
 	public AEItemKey getAsItem() {
 		return AEItemKey.of(item, getTag());
+	}
+
+	private static final LoadingCache<Item, RemoteItem> CACHE = CacheBuilder.newBuilder().build(CacheLoader.from(RemoteItem::new));
+	public static record RemoteItem(Item item) {
 	}
 }
