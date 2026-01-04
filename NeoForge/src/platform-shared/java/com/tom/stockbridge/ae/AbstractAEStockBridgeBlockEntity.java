@@ -2,26 +2,11 @@ package com.tom.stockbridge.ae;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import net.createmod.catnip.data.Pair;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
-import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockState;
-
-import com.simibubi.create.content.logistics.packager.InventorySummary;
+import java.util.UUID;
 
 import com.google.common.collect.ImmutableSet;
-
+import com.simibubi.create.Create;
+import com.simibubi.create.content.logistics.packager.InventorySummary;
 import com.tom.stockbridge.ae.menu.AEStockBridgeMenu;
 import com.tom.stockbridge.block.entity.AbstractStockBridgeBlockEntity;
 
@@ -52,9 +37,23 @@ import appeng.menu.ISubMenu;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocators;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import net.createmod.catnip.data.Pair;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
 
 public abstract class AbstractAEStockBridgeBlockEntity extends AbstractStockBridgeBlockEntity implements
-IGridConnectedBlockEntity, IPriorityHost, IStorageProvider, ICraftingProvider, ICraftingRequester {
+		IGridConnectedBlockEntity, IPriorityHost, IStorageProvider, ICraftingProvider, ICraftingRequester {
 	protected final IManagedGridNode mainNode;
 	protected final MEStorage inventory;
 	private int priority = 100;
@@ -69,13 +68,21 @@ IGridConnectedBlockEntity, IPriorityHost, IStorageProvider, ICraftingProvider, I
 		super(type, pos, state);
 		this.mainNode = this.createMainNode().setVisualRepresentation(AERegistration.BRIDGE_BLOCK.asItem())
 				.setInWorldNode(true).setTagName("proxy").setFlags(GridFlags.REQUIRE_CHANNEL).setIdlePowerUsage(4d);
-		this.inventory = new BridgeStorge();
+		this.inventory = new BridgeStorage();
 		this.craftingTracker = new MultiCraftingTracker(this, 8);
 		this.getMainNode().addService(IStorageProvider.class, this);
 		this.getMainNode().addService(ICraftingRequester.class, this);
 		this.getMainNode().addService(ICraftingProvider.class, this);
 		this.actionSource = new MachineSource(mainNode::getNode);
 		this.onGridConnectableSidesChanged();
+	}
+
+	public void onItemInserted(AEKey what, long amount) {
+		UUID freqId = behaviour.freqId;
+		var promiseQueue = Create.LOGISTICS.getQueuedPromises(freqId);
+		if (promiseQueue != null && what instanceof AEItemKey itemKey) {
+			promiseQueue.itemEnteredSystem(itemKey.toStack((int) amount), (int) amount);
+		}
 	}
 
 	protected IManagedGridNode createMainNode() {
@@ -85,7 +92,7 @@ IGridConnectedBlockEntity, IPriorityHost, IStorageProvider, ICraftingProvider, I
 	@Override
 	protected void write(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
 		super.write(tag, registries, clientPacket);
-		if(!clientPacket) {
+		if (!clientPacket) {
 			this.getMainNode().saveToNBT(tag);
 			tag.putInt("priority", this.getPriority());
 			this.craftingTracker.writeToNBT(tag);
@@ -103,14 +110,14 @@ IGridConnectedBlockEntity, IPriorityHost, IStorageProvider, ICraftingProvider, I
 	@Override
 	protected void read(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
 		super.read(tag, registries, clientPacket);
-		if(!clientPacket) {
+		if (!clientPacket) {
 			this.getMainNode().loadFromNBT(tag);
 			this.priority = tag.getInt("priority");
 			this.craftingTracker.readFromNBT(tag);
 
 			itemRequests.clear();
 			ListTag list = tag.getList("requests", Tag.TAG_COMPOUND);
-			for(int i = 0; i < list.size(); ++i) {
+			for (int i = 0; i < list.size(); ++i) {
 				var t = list.getCompound(i);
 				var key = AEKey.fromTagGeneric(registries, t);
 				long value = t.getLong("cnt");
@@ -218,7 +225,7 @@ IGridConnectedBlockEntity, IPriorityHost, IStorageProvider, ICraftingProvider, I
 		super.tick();
 		if (!level.isClientSide && level.getGameTime() % 20 == Math.abs(worldPosition.hashCode()) % 20) {
 			items = behaviour.getItems();
-			remountStorage();//TODO improve speed
+			remountStorage();// TODO improve speed
 
 			List<Pair<AEKey, Integer>> toRemove = new ArrayList<>();
 			for (final Object2LongMap.Entry<AEKey> input : itemRequests) {
@@ -241,7 +248,10 @@ IGridConnectedBlockEntity, IPriorityHost, IStorageProvider, ICraftingProvider, I
 		}
 	}
 
-	private class BridgeStorge implements MEStorage {
+	public class BridgeStorage implements MEStorage {
+		public AbstractAEStockBridgeBlockEntity getBridgeBlockEntity() {
+			return AbstractAEStockBridgeBlockEntity.this;
+		}
 
 		@Override
 		public Component getDescription() {
@@ -270,7 +280,8 @@ IGridConnectedBlockEntity, IPriorityHost, IStorageProvider, ICraftingProvider, I
 		public void getAvailableStacks(KeyCounter out) {
 			if (items != null) {
 				for (var item : items.getStacks()) {
-					if (item.stack.isEmpty())continue;
+					if (item.stack.isEmpty())
+						continue;
 					out.add(AERemoteItemKey.of(item.stack), item.count);
 				}
 			}
@@ -298,7 +309,8 @@ IGridConnectedBlockEntity, IPriorityHost, IStorageProvider, ICraftingProvider, I
 
 	@Override
 	public InventorySummary fetchSummaryFromPackager() {
-		if (getPackager() == null)return InventorySummary.EMPTY;
+		if (getPackager() == null)
+			return InventorySummary.EMPTY;
 
 		InventorySummary sum = new InventorySummary();
 
@@ -311,7 +323,8 @@ IGridConnectedBlockEntity, IPriorityHost, IStorageProvider, ICraftingProvider, I
 				// TODO exclude loop
 			}
 		});
-		//mainNode.getGrid().getCraftingService().getCraftables(k -> k instanceof AEItemKey);
+		// mainNode.getGrid().getCraftingService().getCraftables(k -> k instanceof
+		// AEItemKey);
 
 		return sum;
 	}
@@ -321,7 +334,8 @@ IGridConnectedBlockEntity, IPriorityHost, IStorageProvider, ICraftingProvider, I
 		if (items != null) {
 			List<IPatternDetails> l = new ArrayList<>();
 			for (var item : items.getStacks()) {
-				if (item.stack.isEmpty())continue;
+				if (item.stack.isEmpty())
+					continue;
 				l.add(VirtualPattern.of(AEItemKey.of(item.stack)));
 			}
 			return l;

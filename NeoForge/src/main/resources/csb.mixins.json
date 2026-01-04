@@ -4,11 +4,8 @@
   "package": "com.tom.stockbridge.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "csb.mixins.refmap.json",
-  "mixins": [
-	"PackagerBlockEntityMixin"
-  ],
-  "client": [
-  ],
+  "mixins": ["PackagerBlockEntityMixin", "NetworkStorageMixin"],
+  "client": [],
   "injectors": {
     "defaultRequire": 1
   }
