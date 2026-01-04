@@ -2,6 +2,9 @@ package com.tom.stockbridge.util;
 
 import org.jetbrains.annotations.NotNull;
 
+import com.tom.stockbridge.block.entity.AbstractStockBridgeBlockEntity;
+import com.tom.stockbridge.block.entity.AbstractStockBridgeBlockEntity.BridgeInventory;
+
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -11,12 +14,9 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.wrapper.CombinedInvWrapper;
 import net.neoforged.neoforge.items.wrapper.InvWrapper;
 
-import com.tom.stockbridge.block.entity.AbstractStockBridgeBlockEntity;
-import com.tom.stockbridge.block.entity.AbstractStockBridgeBlockEntity.BridgeInventory;
-
 public class StockBridgeInventory implements IItemHandler, BridgeInventory {
-	private SimpleContainer insert = new SimpleContainer(9);
-	private SimpleContainer extract = new SimpleContainer(9);
+	private SimpleContainer insert = new SimpleContainer(27);
+	private SimpleContainer extract = new SimpleContainer(27);
 	public InvWrapper insertW = new InvWrapper(insert);
 	public InvWrapper extractW = new InvWrapper(extract);
 
