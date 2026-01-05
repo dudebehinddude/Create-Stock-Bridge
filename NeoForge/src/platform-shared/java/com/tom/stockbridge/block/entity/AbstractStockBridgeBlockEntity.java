@@ -5,15 +5,6 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
 
-import net.createmod.catnip.data.Iterate;
-import net.createmod.catnip.data.Pair;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.Vec3;
-
 import com.simibubi.create.api.equipment.goggles.IHaveHoveringInformation;
 import com.simibubi.create.content.logistics.packager.IdentifiedInventory;
 import com.simibubi.create.content.logistics.packager.InventorySummary;
@@ -23,8 +14,19 @@ import com.simibubi.create.content.logistics.packagerLink.WiFiParticle;
 import com.simibubi.create.content.logistics.stockTicker.PackageOrderWithCrafts;
 import com.simibubi.create.content.redstone.displayLink.LinkWithBulbBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
+import com.tom.stockbridge.util.StockBridgeInventory;
 
-public abstract class AbstractStockBridgeBlockEntity extends LinkWithBulbBlockEntity implements IHaveHoveringInformation {
+import net.createmod.catnip.data.Iterate;
+import net.createmod.catnip.data.Pair;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+
+public abstract class AbstractStockBridgeBlockEntity extends LinkWithBulbBlockEntity
+		implements IHaveHoveringInformation {
 	public BridgeBehaviour behaviour;
 	public UUID placedBy;
 
@@ -41,7 +43,8 @@ public abstract class AbstractStockBridgeBlockEntity extends LinkWithBulbBlockEn
 
 	public abstract InventorySummary fetchSummaryFromPackager();
 
-	public abstract Pair<PackagerBlockEntity, PackagingRequest> processRequest(ItemStack stack, int amount, String address,
+	public abstract Pair<PackagerBlockEntity, PackagingRequest> processRequest(ItemStack stack, int amount,
+			String address,
 			int linkIndex, MutableBoolean finalLink, int orderId, PackageOrderWithCrafts context);
 
 	public abstract IdentifiedInventory getInvId();
@@ -71,6 +74,8 @@ public abstract class AbstractStockBridgeBlockEntity extends LinkWithBulbBlockEn
 	}
 
 	public abstract void pull(PackagingRequest packagingRequest);
+
+	public abstract StockBridgeInventory getInv();
 
 	@Override
 	public Direction getBulbFacing(BlockState state) {

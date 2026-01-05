@@ -114,7 +114,8 @@ public class AEStockBridgeBlockEntity extends AbstractAEStockBridgeBlockEntity {
 		ItemStack ex = ItemHandlerHelper.insertItemStacked(inv.extractW,
 				packagingRequest.item().copyWithCount((int) extracted), false);
 		if (!ex.isEmpty()) {
-			// TODO handle full
+			// Force insert the remainder back into ME
+			networkInv.insert(AEItemKey.of(ex), ex.getCount(), Actionable.MODULATE, actionSource);
 		}
 		sendPulseNextSync();
 		notifyUpdate();
@@ -136,6 +137,7 @@ public class AEStockBridgeBlockEntity extends AbstractAEStockBridgeBlockEntity {
 		}
 	}
 
+	@Override
 	public StockBridgeInventory getInv() {
 		return inv;
 	}

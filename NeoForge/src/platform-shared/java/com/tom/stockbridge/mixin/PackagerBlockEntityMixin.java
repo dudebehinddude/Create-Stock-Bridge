@@ -1,6 +1,9 @@
 package com.tom.stockbridge.mixin;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -20,12 +23,17 @@ import com.tom.stockbridge.block.entity.AbstractStockBridgeBlockEntity.BridgeInv
 import net.createmod.catnip.data.Iterate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
 
 @Mixin(value = PackagerBlockEntity.class, remap = false)
 public abstract class PackagerBlockEntityMixin extends SmartBlockEntity {
+	private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(PackagerBlockEntityMixin.class);
+
 	public @Shadow InvManipulationBehaviour targetInventory;
 
 	public PackagerBlockEntityMixin(BlockEntityType<?> type, BlockPos pos, BlockState state) {
@@ -71,14 +79,38 @@ public abstract class PackagerBlockEntityMixin extends SmartBlockEntity {
 		String firstAddress = firstRequest.address();
 		int firstOrderId = firstRequest.orderId();
 
-		// Pull items for all requests that can be combined (same address/orderId)
+		// Get all requests that can be combined (same address/orderId)
+		List<PackagingRequest> combinedRequests = new ArrayList<>();
+		Set<Item> combinedRequestItems = new HashSet<>();
 		for (PackagingRequest request : queuedRequests) {
-			if (request.address().equals(firstAddress) && request.orderId() == firstOrderId) {
-				bridge.pull(request);
-				continue;
+			if (!request.address().equals(firstAddress) || request.orderId() != firstOrderId) {
+				break;
 			}
-			// Stop here as attemptToSend stops here
-			break;
+
+			combinedRequests.add(request);
+			combinedRequestItems.add(request.item().getItem());
+		}
+
+		var inv = bridge.getInv();
+
+		// Return leftover items that aren't needed
+		if (!inv.extractW.getInv().isEmpty()) {
+			for (int i = 0; i < inv.extractW.getSlots(); i++) {
+				ItemStack stack = inv.extractW.getStackInSlot(i);
+				if (!stack.isEmpty() && !combinedRequestItems.contains(stack.getItem())) {
+					LOGGER.info("Returning leftover item in packager inventory to ME: " + stack.getCount() + "x "
+							+ stack.getDisplayName().getString());
+					ItemStack notInserted = ItemHandlerHelper.insertItemStacked(inv.insertW, stack.copy(), false);
+					inv.extractW.getInv().setItem(i, notInserted);
+				}
+			}
+		}
+
+		for (PackagingRequest request : combinedRequests) {
+			// this will pull more than it needs to for large requests but it (should?) fix
+			// itself since items not part of the current request end up getting returned so
+			// I think it's fine?
+			bridge.pull(request);
 		}
 	}
 }
